@@ -1,0 +1,233 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "576af9d9-3174-4145-a22a-6af887c6a13e",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "10000\n"
+     ]
+    }
+   ],
+   "source": [
+    "#Final Project CS 437\n",
+    "#Shaheen Nafeie, Navid Nafeie, Jason Pham\n",
+    "\n",
+    "import pandas as pd \n",
+    "import sklearn\n",
+    "from sklearn.ensemble import GradientBoostingRegressor\n",
+    "\n",
+    "# Load dataset into a Pandas DataFrame\n",
+    "my_data = pd.read_csv(\"train10k.csv\")\n",
+    "\n",
+    "# Fill missing values in the dataset with with 0\n",
+    "my_data.fillna(value=0, inplace=True)\n",
+    "\n",
+    "# Count total number of rows in the dataset\n",
+    "total_rows = len(my_data)\n",
+    "\n",
+    "# Output the total number of rows\n",
+    "print(total_rows)\n",
+    "\n",
+    "# Display column names in the dataset\n",
+    "my_data.columns\n",
+    "\n",
+    "# Select a subset of data containing specific columns\n",
+    "lin_data = my_data[['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP', 'Target']]\n",
+    "\n",
+    "# Split the data into training (70%) and testing (30%) \n",
+    "my_train= lin_data.sample(frac =0.7)\n",
+    "\n",
+    "# Use remaining data for testing\n",
+    "my_test= lin_data.drop(my_train.index)\n",
+    "\n",
+    "# Separate the features (independent varibles) and target (dependent variable)\n",
+    "train_x = my_train.drop( columns = [ 'Target' ] )\n",
+    "\n",
+    "# Target values for training\n",
+    "train_y = my_train[ 'Target' ]\n",
+    "\n",
+    "\n",
+    "# Separate the features for testing\n",
+    "test_x=my_test.drop(columns = ['Target'])\n",
+    "\n",
+    "# Separate the target values for testing\n",
+    "test_y = my_test[ ['Target'] ]\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "0a5a90a6-6daf-4208-9281-de4a10188860",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "-0.015043012741787588\n"
+     ]
+    }
+   ],
+   "source": [
+    "#pipeline\n",
+    "from sklearn.pipeline import Pipeline\n",
+    "from sklearn.base import TransformerMixin, BaseEstimator\n",
+    "from sklearn.preprocessing import StandardScaler\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "from sklearn.compose import TransformedTargetRegressor\n",
+    "import numpy as np\n",
+    "\n",
+    "from sklearn.model_selection import GridSearchCV\n",
+    "\n",
+    "# Custom transformer to select specific columns\n",
+    "class SelectColumns( BaseEstimator, TransformerMixin ):\n",
+    "\n",
+    "    def __init__( self, columns ):\n",
+    "        self.columns = columns\n",
+    "\n",
+    "    def fit( self, xs, ys, **params ):\n",
+    "        return self\n",
+    "\n",
+    "    def transform( self, xs ):\n",
+    "        return xs[ self.columns ]\n",
+    "\n",
+    "\n",
+    "# Standard scaler for feature scaling\n",
+    "scalar=StandardScaler()\n",
+    "\n",
+    "# Define pipeline stages\n",
+    "stages = [\n",
+    "( 'column_select', SelectColumns( ['Open', 'High', 'Low', 'Close', 'Volume', 'VWAP'] ) ),\n",
+    "('scalar', StandardScaler()),\n",
+    " ( 'Gradient_Boosting_Regressor', GradientBoostingRegressor())\n",
+    "]\n",
+    "\n",
+    "# Create a pipeline \n",
+    "my_pipe=Pipeline(stages)\n",
+    "\n",
+    "# Split the data into features (xs) and target (ys)\n",
+    "xs = lin_data.drop( columns = [ 'Target' ] )\n",
+    "ys = lin_data[ 'Target' ]\n",
+    "\n",
+    "\n",
+    "# Split the data into training and testing sets (70% for training and 30% testing)\n",
+    "train_x, test_x, train_y, test_y = train_test_split( xs, ys, train_size = 0.7 )\n",
+    "\n",
+    "# Fit the pipeline on the training data\n",
+    "my_pipe.fit( train_x, train_y )\n",
+    "\n",
+    "\n",
+    "# Define a hyperparaameter grid for tuning the gradient boosting regressor\n",
+    "hyperparam_grid = {\n",
+    "            'Gradient_Boosting_Regressor__n_estimators':[100],\n",
+    "            'Gradient_Boosting_Regressor__learning_rate':[0.01],\n",
+    "            'Gradient_Boosting_Regressor__max_depth':[10,20],\n",
+    "\n",
+    "}    \n",
+    "\n",
+    "# Initialize GridSearchCV with the pipeline, hyperparameter grid, and metric\n",
+    "gsgbr = GridSearchCV(my_pipe , hyperparam_grid ,  scoring = 'r2')\n",
+    "\n",
+    "# Fit GridSearchCV on the entire dataset (xs, ys)\n",
+    "gsgbr.fit(xs,ys)\n",
+    "             \n",
+    "# Print the best R-squared score from GridSearchCV\n",
+    "gsgbr.best_score_\n",
+    "print(gsgbr.best_score_)\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "1b629e87-8b67-4505-a484-754ef6f9b121",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "R-squared score on test data: 0.24951527375153648\n",
+      "Mean Squared Error on test data: 2.2500014519793037e-05\n",
+      "Sample predictions: [ 8.97566819e-05  1.67649860e-04 -5.26453249e-05  1.64313810e-03\n",
+      "  1.12662574e-04]\n",
+      "Actual values for comparison: [0.01201665 0.00029082 0.00018791 0.00733264 0.00054073]\n",
+      "Best score from GridSearchCV: -0.015675288769604334\n",
+      "Best parameters found by GridSearchCV: {'Gradient_Boosting_Regressor__learning_rate': 0.01, 'Gradient_Boosting_Regressor__max_depth': 10, 'Gradient_Boosting_Regressor__n_estimators': 100}\n",
+      "Sample predictions: [ 8.97566819e-05  1.67649860e-04 -5.26453249e-05  1.64313810e-03\n",
+      "  1.12662574e-04]\n",
+      "Actual values for comparison: [0.01201665 0.00029082 0.00018791 0.00733264 0.00054073]\n"
+     ]
+    }
+   ],
+   "source": [
+    "from sklearn.metrics import r2_score, mean_squared_error\n",
+    "\n",
+    "predictions = gsgbr.predict(test_x)\n",
+    "# Print the R-squared score on the test data\n",
+    "r2 = r2_score(test_y, predictions)\n",
+    "print(\"R-squared score on test data:\", r2)\n",
+    "\n",
+    "# Print the Mean Squared Error on the test data\n",
+    "mse = mean_squared_error(test_y, predictions)\n",
+    "print(\"Mean Squared Error on test data:\", mse)\n",
+    "\n",
+    "# Print the first few predictions for comparison\n",
+    "print(\"Sample predictions:\", predictions[:5])\n",
+    "print(\"Actual values for comparison:\", test_y.values[:5])\n",
+    "\n",
+    "# Print the best score found by GridSearchCV\n",
+    "print(\"Best score from GridSearchCV:\", gsgbr.best_score_)\n",
+    "print(\"Best parameters found by GridSearchCV:\", gsgbr.best_params_)\n",
+    "\n",
+    "# Test predictions on the test data\n",
+    "predictions = gsgbr.predict(test_x)\n",
+    "print(\"Sample predictions:\", predictions[:5])\n",
+    "print(\"Actual values for comparison:\", test_y.values[:5])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e163baea-13f6-47ef-9d4d-60722c57b269",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
